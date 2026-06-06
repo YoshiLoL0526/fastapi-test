@@ -94,8 +94,8 @@ Estado de cada tarea actualizado a medida que se completa. Las tareas están ord
 
 ## Fase 6 — Script de Seed
 
-- ⬜ `scripts/seed_db.py` — datos realistas (categorías, productos, usuarios, órdenes, reseñas)
-- ⬜ `scripts/check_connectivity.py` — verifica acceso a la API antes del test
+- ✅ `scripts/seed_db.py` — datos realistas (categorías, productos, usuarios, órdenes, reseñas)
+- ✅ `scripts/check_connectivity.py` — verifica acceso a la API antes del test
 
 ---
 
