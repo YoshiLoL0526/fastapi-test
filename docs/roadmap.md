@@ -36,15 +36,15 @@ Estado de cada tarea actualizado a medida que se completa. Las tareas están ord
 
 ## Fase 2 — Modelos y Migraciones
 
-- ⬜ `api/models/user.py` — `User`, `RefreshToken`, `Address`
-- ⬜ `api/models/product.py` — `Product`, `Category`
-- ⬜ `api/models/inventory.py` — `Inventory`, `InventoryMovement`
-- ⬜ `api/models/cart.py` — `Cart`, `CartItem`, `Coupon`
-- ⬜ `api/models/order.py` — `Order`, `OrderItem`
-- ⬜ `api/models/payment.py` — `Payment`
-- ⬜ `api/models/review.py` — `Review`
-- ⬜ Configuración de Alembic (`alembic.ini`, `env.py`)
-- ⬜ Migración inicial (`alembic revision --autogenerate`)
+- ✅ `api/models/user.py` — `User`, `RefreshToken`, `Address`
+- ✅ `api/models/product.py` — `Product`, `Category`
+- ✅ `api/models/inventory.py` — `Inventory`, `InventoryMovement`
+- ✅ `api/models/cart.py` — `Cart`, `CartItem`, `Coupon`
+- ✅ `api/models/order.py` — `Order`, `OrderItem`
+- ✅ `api/models/payment.py` — `Payment`
+- ✅ `api/models/review.py` — `Review`
+- ✅ Configuración de Alembic (`alembic.ini`, `env.py`)
+- ✅ Migración inicial (`alembic revision --autogenerate`)
 
 ---
 
