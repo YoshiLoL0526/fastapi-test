@@ -18,6 +18,7 @@ class TokenEntry:
     access_token: str
     refresh_token: str
     expires_at: float  # unix timestamp
+    address_id: str = ""
 
 
 def _random_email() -> str:
@@ -76,13 +77,35 @@ class TokenPool:
             resp = await client.post("/auth/login", json={"email": email, "password": password})
 
         data = resp.json()
-        return TokenEntry(
+        entry = TokenEntry(
             user_id=data.get("user", {}).get("id", ""),
             email=email,
             access_token=data["access_token"],
             refresh_token=data["refresh_token"],
             expires_at=time.time() + (settings.request_timeout_s * 60),
         )
+        await self._ensure_address(client, entry)
+        return entry
+
+    async def _ensure_address(self, client: httpx.AsyncClient, entry: TokenEntry) -> None:
+        """Create a shipping address for the user if none exists."""
+        headers = {"Authorization": f"Bearer {entry.access_token}"}
+        resp = await client.get("/users/me/addresses", headers=headers)
+        if resp.status_code == 200:
+            addresses = resp.json()
+            if addresses:
+                entry.address_id = addresses[0]["id"]
+                return
+        create_resp = await client.post("/users/me/addresses", headers=headers, json={
+            "line1": "123 Load Test Street",
+            "city": "Test City",
+            "state": "CA",
+            "country": "US",
+            "zip_code": "90001",
+            "is_default": True,
+        })
+        if create_resp.status_code in (200, 201):
+            entry.address_id = create_resp.json()["id"]
 
     async def acquire(self) -> TokenEntry:
         """Get a token from the pool (round-robin)."""

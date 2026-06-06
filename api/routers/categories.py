@@ -13,7 +13,7 @@ router = APIRouter(prefix="/categories", tags=["categories"])
 
 
 def _build_tree(categories: list[Category]) -> list[CategoryTree]:
-    by_id = {c.id: CategoryTree.model_validate(c) for c in categories}
+    by_id = {c.id: CategoryTree(**CategoryRead.model_validate(c).model_dump()) for c in categories}
     roots: list[CategoryTree] = []
     for node in by_id.values():
         if node.parent_id and node.parent_id in by_id:

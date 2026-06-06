@@ -82,8 +82,10 @@ async def run(worker_id: int) -> None:
         await _think()
 
         # 6. Checkout
+        if not token_entry.address_id:
+            return
         result, order_body = await client.post("/orders/", json={
-            "shipping_address": "123 Test Street, Load City, LC 00000",
+            "shipping_address_id": token_entry.address_id,
         })
         metrics_store.record(result)
         await _think()
