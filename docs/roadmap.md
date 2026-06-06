@@ -24,13 +24,13 @@ Estado de cada tarea actualizado a medida que se completa. Las tareas están ord
 
 ## Fase 1 — Core del API
 
-- ⬜ `api/core/config.py` — Settings con pydantic-settings
-- ⬜ `api/core/database.py` — Motor async, Session factory, función de cierre
-- ⬜ `api/core/security.py` — Hash de contraseñas, JWT encode/decode
-- ⬜ `api/core/dependencies.py` — `get_db`, `get_current_user`, `require_admin`
-- ⬜ `api/middleware/timing.py` — Header `X-Process-Time`
-- ⬜ `api/middleware/request_id.py` — Header `X-Request-ID`
-- ⬜ `api/main.py` — Instancia FastAPI, registro de routers y middleware
+- ✅ `api/core/config.py` — Settings con pydantic-settings
+- ✅ `api/core/database.py` — Motor async, Session factory, función de cierre
+- ✅ `api/core/security.py` — Hash de contraseñas, JWT encode/decode
+- ✅ `api/core/dependencies.py` — `get_db`, `get_current_user`, `require_admin`
+- ✅ `api/middleware/timing.py` — Header `X-Process-Time`
+- ✅ `api/middleware/request_id.py` — Header `X-Request-ID`
+- ✅ `api/main.py` — Instancia FastAPI, registro de routers y middleware
 
 ---
 
