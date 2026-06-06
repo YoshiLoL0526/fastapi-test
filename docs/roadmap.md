@@ -64,31 +64,31 @@ Estado de cada tarea actualizado a medida que se completa. Las tareas están ord
 
 ## Fase 4 — Servicios y Lógica de Negocio
 
-- ⬜ `api/services/auth.py` — login, registro, refresh, logout
-- ⬜ `api/services/product.py` — búsqueda, filtros, paginación
-- ⬜ `api/services/cart.py` — agregar, actualizar, vaciar, aplicar cupón
-- ⬜ `api/services/order.py` — checkout, transición de estados
-- ⬜ `api/services/payment.py` — procesamiento simulado con delay
-- ⬜ `api/services/inventory.py` — reserva atómica de stock
-- ⬜ `api/services/review.py` — CRUD + validación de compra verificada
-- ⬜ `api/tasks/background.py` — recálculo de rating, notificaciones, stock
+- ✅ `api/services/auth.py` — login, registro, refresh, logout
+- ✅ `api/services/product.py` — búsqueda, filtros, paginación
+- ✅ `api/services/cart.py` — agregar, actualizar, vaciar, aplicar cupón
+- ✅ `api/services/order.py` — checkout, transición de estados
+- ✅ `api/services/payment.py` — procesamiento simulado con delay
+- ✅ `api/services/inventory.py` — reserva atómica de stock
+- ✅ `api/services/review.py` — CRUD + validación de compra verificada
+- ✅ `api/tasks/background.py` — recálculo de rating, notificaciones, stock
 
 ---
 
 ## Fase 5 — Routers
 
-- ⬜ `api/routers/auth.py`
-- ⬜ `api/routers/users.py`
-- ⬜ `api/routers/products.py`
-- ⬜ `api/routers/categories.py`
-- ⬜ `api/routers/cart.py`
-- ⬜ `api/routers/orders.py`
-- ⬜ `api/routers/payments.py`
-- ⬜ `api/routers/inventory.py`
-- ⬜ `api/routers/reviews.py`
-- ⬜ `api/routers/uploads.py`
-- ⬜ `api/routers/websockets.py`
-- ⬜ `api/routers/health.py`
+- ✅ `api/routers/auth.py`
+- ✅ `api/routers/users.py`
+- ✅ `api/routers/products.py`
+- ✅ `api/routers/categories.py`
+- ✅ `api/routers/cart.py`
+- ✅ `api/routers/orders.py`
+- ✅ `api/routers/payments.py`
+- ✅ `api/routers/inventory.py`
+- ✅ `api/routers/reviews.py`
+- ✅ `api/routers/uploads.py`
+- ✅ `api/routers/websockets.py`
+- ✅ `api/routers/health.py`
 
 ---
 
