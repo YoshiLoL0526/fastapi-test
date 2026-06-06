@@ -50,15 +50,15 @@ Estado de cada tarea actualizado a medida que se completa. Las tareas están ord
 
 ## Fase 3 — Schemas Pydantic
 
-- ⬜ `api/schemas/user.py`
-- ⬜ `api/schemas/product.py`
-- ⬜ `api/schemas/category.py`
-- ⬜ `api/schemas/cart.py`
-- ⬜ `api/schemas/order.py`
-- ⬜ `api/schemas/payment.py`
-- ⬜ `api/schemas/review.py`
-- ⬜ `api/schemas/inventory.py`
-- ⬜ `api/schemas/common.py` — respuestas paginadas, mensajes de error
+- ✅ `api/schemas/user.py`
+- ✅ `api/schemas/product.py`
+- ✅ `api/schemas/category.py`
+- ✅ `api/schemas/cart.py`
+- ✅ `api/schemas/order.py`
+- ✅ `api/schemas/payment.py`
+- ✅ `api/schemas/review.py`
+- ✅ `api/schemas/inventory.py`
+- ✅ `api/schemas/common.py` — respuestas paginadas, mensajes de error
 
 ---
 
