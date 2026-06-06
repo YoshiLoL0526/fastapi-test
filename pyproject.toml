@@ -36,7 +36,8 @@ dev = [
 [project.scripts]
 start-api    = "api.main:start"
 start-tester = "load_tester.runner:run"
-seed-db      = "scripts.seed_db:main"
+seed-db      = "scripts.seed_db:run"
+e2e-check    = "scripts.e2e_check:run"
 
 [tool.uv]
 default-groups = []

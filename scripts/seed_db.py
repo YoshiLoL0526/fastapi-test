@@ -28,7 +28,7 @@ import api.models.user  # noqa: F401
 from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from api.core.database import AsyncSessionLocal
+from api.core.database import AsyncSessionLocal, Base, engine
 from api.core.security import hash_password
 from api.models.cart import Coupon
 from api.models.inventory import Inventory, InventoryMovement
@@ -332,7 +332,7 @@ async def seed_products(
 
     # Cycle through templates until we reach NUM_PRODUCTS
     for i in range(NUM_PRODUCTS):
-        cat_slug, (base_name, desc, base_price) in templates_flat[i % len(templates_flat)]
+        cat_slug, (base_name, desc, base_price) = templates_flat[i % len(templates_flat)]
 
         # Add a numeric suffix to avoid duplicate slugs when cycling
         slug_counters[cat_slug] = slug_counters.get(cat_slug, 0) + 1
@@ -509,7 +509,7 @@ async def seed_orders(
         result = await session.execute(select(Product).where(Product.id.in_(chosen_products)))
         products = {p.id: p for p in result.scalars().all()}
 
-        subtotal = sum(products[pid].price * random.randint(1, 3) for pid in chosen_products)
+        subtotal = float(sum(products[pid].price * random.randint(1, 3) for pid in chosen_products))
         tax = round(subtotal * 0.08, 2)
         total = round(subtotal + tax, 2)
 
@@ -597,7 +597,7 @@ async def seed_reviews(
     await session.flush()
 
     # Recalculate rating_avg / rating_count for each reviewed product
-    reviewed_products = {pid for _, _, pid in order_product_pairs[:count]}
+    reviewed_products = {pid for pid, _ in seen}
     for pid in reviewed_products:
         result = await session.execute(
             select(func.avg(Review.rating), func.count(Review.id)).where(Review.product_id == pid)
@@ -617,6 +617,9 @@ async def seed_reviews(
 
 async def main() -> None:
     print("🌱 Seeding database…\n")
+
+    async with engine.begin() as conn:
+        await conn.run_sync(Base.metadata.create_all)
 
     async with AsyncSessionLocal() as session:
         # Idempotency check
@@ -652,5 +655,9 @@ async def main() -> None:
             raise
 
 
-if __name__ == "__main__":
+def run() -> None:
     asyncio.run(main())
+
+
+if __name__ == "__main__":
+    run()

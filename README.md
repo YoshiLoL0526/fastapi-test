@@ -99,11 +99,19 @@ uv run uvicorn api.main:app --host 0.0.0.0 --port 8000 --reload
 La API estará disponible en `http://<ip-servidor>:8000`.
 La documentación interactiva en `http://<ip-servidor>:8000/docs`.
 
-### 3. Verificar conectividad (PC cliente)
+### 3. Verificar el sistema end-to-end (PC cliente)
+
+Antes de lanzar el test completo, comprueba que la API responde correctamente en todos sus endpoints:
 
 ```bash
+# Verificación rápida de conectividad
 uv run python scripts/check_connectivity.py
+
+# Verificación completa (ejercita el flujo de compra de extremo a extremo)
+uv run e2e-check
 ```
+
+El script `e2e_check.py` registra un usuario temporal, añade un producto al carrito, hace checkout y verifica las órdenes. Sale con código 1 si algún paso falla.
 
 ### 4. Ejecutar el load tester y abrir el dashboard (PC cliente)
 
@@ -227,3 +235,39 @@ fastapi-benchmark/
 | Cliente (tester) | PC 1 | AMD Ryzen 5 5500 (6C/12T) | 24 GB DDR4 |
 
 El cliente tiene más capacidad que el servidor de forma intencional: el objetivo es crear un cuello de botella en el servidor y observar cómo se comporta bajo presión sostenida.
+
+---
+
+## Resultados Esperados
+
+Los rangos siguientes corresponden al hardware documentado con **SQLite** y **4 workers Gunicorn**. Con PostgreSQL los valores de escritura mejoran entre un 2x y 4x.
+
+### RPS por tipo de operación
+
+| Operación | RPS esperado (SQLite) | RPS esperado (PostgreSQL) |
+|---|---|---|
+| `GET /products/` (listado) | 300 – 500 | 600 – 1000 |
+| `GET /products/?search=…` | 200 – 350 | 400 – 700 |
+| `POST /auth/login` | 150 – 250 | 300 – 500 |
+| `POST /cart/items` | 80 – 150 | 200 – 400 |
+| `POST /orders/` (checkout) | 40 – 80 | 120 – 250 |
+| Carga mixta (flujos combinados) | **100 – 200** | **250 – 450** |
+
+### Latencias esperadas (carga mixta, 50 workers)
+
+| Percentil | SQLite | PostgreSQL |
+|---|---|---|
+| P50 | 8 – 25 ms | 5 – 15 ms |
+| P95 | 80 – 200 ms | 40 – 100 ms |
+| P99 | 200 – 600 ms | 80 – 250 ms |
+
+### Punto de saturación estimado
+
+Con SQLite, el servidor alcanza el límite de throughput útil alrededor de **60 – 80 workers concurrentes**. Por encima, la latencia P99 se dispara pero el RPS se mantiene estable o baja levemente. Esta es exactamente la zona que explora el escenario `ramp_up`.
+
+### Notas de interpretación
+
+- El cuello de botella con SQLite suele ser el lock de escritura en disco, no la CPU del servidor.
+- El cuello de botella con PostgreSQL suele ser la CPU del i5-8250U alrededor de 60–70% de uso.
+- La tasa de error esperada en condiciones normales es < 1% (solo errores de stock agotado y pagos rechazados simulados).
+- Un P99 > 2000 ms o error_rate > 5% indica que el servidor está completamente saturado.

@@ -133,7 +133,8 @@ Estado de cada tarea actualizado a medida que se completa. Las tareas están ord
 
 ## Fase 10 — Integración Final
 
-- ⬜ Verificación end-to-end: API + seed + load tester + dashboard
-- ⬜ Prueba en LAN entre las dos PCs
-- ⬜ Ajuste de parámetros según hardware real
-- ⬜ Documentación de resultados en `README.md`
+- ✅ Verificación end-to-end: `scripts/e2e_check.py` (13 checks: health → auth → catálogo → carrito → checkout → inventario)
+- ✅ Fix bug: health check URL `/health` → `/health/` en `load_tester/runner.py` (httpx no sigue redirects por defecto)
+- ✅ Ajuste de parámetros según hardware real: `.env.example` calibrado para i5-8250U (servidor) y Ryzen 5 5500 (cliente)
+- ✅ Documentación de resultados en `README.md` (rangos de RPS, latencias, punto de saturación)
+- ⬜ Prueba en LAN entre las dos PCs (requiere hardware físico)

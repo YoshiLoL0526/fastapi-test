@@ -67,6 +67,7 @@ class TokenPool:
         if resp.status_code != 200:
             reg_resp = await client.post("/auth/register", json={
                 "email": email,
+                "username": f"loadtest_{index:04d}",
                 "password": password,
                 "full_name": f"Load Tester {index}",
             })
