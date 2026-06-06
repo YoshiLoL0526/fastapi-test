@@ -1,0 +1,347 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Load Tester Dashboard</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+  <script src="https://unpkg.com/htmx.org@1.9.10"></script>
+  <style>
+    body { background: #0f172a; color: #e2e8f0; font-family: ui-monospace, monospace; }
+    .card { background: #1e293b; border: 1px solid #334155; border-radius: 0.75rem; }
+    .badge-idle    { background: #334155; color: #94a3b8; }
+    .badge-running { background: #064e3b; color: #34d399; }
+    .badge-finished{ background: #1e3a5f; color: #60a5fa; }
+    .metric-val { font-size: 2rem; font-weight: 700; line-height: 1; }
+    .ok    { color: #34d399; }
+    .warn  { color: #fbbf24; }
+    .error { color: #f87171; }
+    table { width: 100%; border-collapse: collapse; font-size: 0.8rem; }
+    th { background: #0f172a; color: #64748b; text-align: left; padding: 0.4rem 0.6rem; border-bottom: 1px solid #334155; cursor: pointer; user-select: none; }
+    td { padding: 0.35rem 0.6rem; border-bottom: 1px solid #1e293b; }
+    tr:hover td { background: #1e293b; }
+    .sparkline { height: 32px; }
+  </style>
+</head>
+<body class="min-h-screen p-4">
+
+  <!-- ── Top status bar ────────────────────────────────────────────────── -->
+  <div class="card p-4 mb-4 flex flex-wrap items-center gap-6">
+    <div class="flex items-center gap-3">
+      <span id="status-badge" class="badge-idle px-3 py-1 rounded-full text-sm font-semibold uppercase">Idle</span>
+      <span id="scenario-name" class="text-slate-400 text-sm">—</span>
+    </div>
+    <div class="flex gap-6 flex-wrap text-sm">
+      <div><span class="text-slate-500">Elapsed</span> <span id="elapsed" class="ml-1 font-semibold">—</span></div>
+      <div><span class="text-slate-500">Workers</span> <span id="workers" class="ml-1 font-semibold text-emerald-400">—</span></div>
+      <div><span class="text-slate-500">Total Requests</span> <span id="total-req" class="ml-1 font-semibold">—</span></div>
+      <div><span class="text-slate-500">Total Errors</span> <span id="total-err" class="ml-1 font-semibold text-red-400">—</span></div>
+    </div>
+    <div class="ml-auto flex gap-2">
+      <a id="dl-json" href="/report?format=json" class="px-3 py-1.5 rounded bg-slate-700 hover:bg-slate-600 text-sm" download>↓ JSON</a>
+      <a id="dl-csv"  href="/report?format=csv"  class="px-3 py-1.5 rounded bg-slate-700 hover:bg-slate-600 text-sm" download>↓ CSV</a>
+    </div>
+  </div>
+
+  <!-- ── KPI cards ─────────────────────────────────────────────────────── -->
+  <div class="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-4">
+    <div class="card p-4">
+      <div class="text-slate-500 text-xs mb-1">RPS (5s window)</div>
+      <div id="kpi-rps" class="metric-val text-sky-400">—</div>
+      <canvas id="spark-rps" class="sparkline mt-2 w-full"></canvas>
+    </div>
+    <div class="card p-4">
+      <div class="text-slate-500 text-xs mb-1">Latency P95</div>
+      <div id="kpi-p95" class="metric-val ok">—</div>
+      <div class="text-xs text-slate-500 mt-1">P50 <span id="kpi-p50" class="text-slate-300">—</span> &nbsp; P99 <span id="kpi-p99" class="text-slate-300">—</span></div>
+    </div>
+    <div class="card p-4">
+      <div class="text-slate-500 text-xs mb-1">Error Rate</div>
+      <div id="kpi-err" class="metric-val ok">—</div>
+      <div class="text-xs text-slate-500 mt-1">of last 5s window</div>
+    </div>
+    <div class="card p-4">
+      <div class="text-slate-500 text-xs mb-1">Throughput</div>
+      <div id="kpi-tp" class="metric-val text-violet-400">—</div>
+      <div class="text-xs text-slate-500 mt-1">KB/s received</div>
+    </div>
+  </div>
+
+  <!-- ── Charts ────────────────────────────────────────────────────────── -->
+  <div class="grid grid-cols-1 lg:grid-cols-2 gap-4 mb-4">
+    <div class="card p-4">
+      <div class="text-slate-400 text-xs mb-3 font-semibold uppercase tracking-widest">RPS & Errors / s</div>
+      <canvas id="chart-rps" height="120"></canvas>
+    </div>
+    <div class="card p-4">
+      <div class="text-slate-400 text-xs mb-3 font-semibold uppercase tracking-widest">Latency (ms)</div>
+      <canvas id="chart-lat" height="120"></canvas>
+    </div>
+    <div class="card p-4">
+      <div class="text-slate-400 text-xs mb-3 font-semibold uppercase tracking-widest">Workers Active</div>
+      <canvas id="chart-workers" height="120"></canvas>
+    </div>
+    <div class="card p-4">
+      <div class="text-slate-400 text-xs mb-3 font-semibold uppercase tracking-widest">Latency Distribution</div>
+      <canvas id="chart-hist" height="120"></canvas>
+    </div>
+  </div>
+
+  <!-- ── Endpoint table ─────────────────────────────────────────────────── -->
+  <div class="card p-4 mb-4">
+    <div class="text-slate-400 text-xs mb-3 font-semibold uppercase tracking-widest">Endpoint Breakdown</div>
+    <div class="overflow-x-auto">
+      <table id="ep-table">
+        <thead>
+          <tr>
+            <th>Endpoint</th>
+            <th>Requests</th>
+            <th>RPS</th>
+            <th>P50 (ms)</th>
+            <th>P95 (ms)</th>
+            <th>P99 (ms)</th>
+            <th>Errors</th>
+            <th>Error %</th>
+          </tr>
+        </thead>
+        <tbody id="ep-tbody"></tbody>
+      </table>
+    </div>
+  </div>
+
+  <!-- ── Recent errors ──────────────────────────────────────────────────── -->
+  <div class="card p-4">
+    <div class="text-slate-400 text-xs mb-3 font-semibold uppercase tracking-widest">Recent Errors (last 20)</div>
+    <div class="overflow-x-auto">
+      <table id="err-table">
+        <thead>
+          <tr>
+            <th>Time</th>
+            <th>Endpoint</th>
+            <th>Code</th>
+            <th>Kind</th>
+            <th>Worker</th>
+            <th>Message</th>
+          </tr>
+        </thead>
+        <tbody id="err-tbody"></tbody>
+      </table>
+    </div>
+  </div>
+
+<script>
+// ── Helpers ──────────────────────────────────────────────────────────────────
+const MAX_POINTS = 300; // 5 minutes of 1s data
+
+function addPoint(chart, label, ...datasets) {
+  chart.data.labels.push(label);
+  datasets.forEach((val, i) => chart.data.datasets[i].data.push(val));
+  if (chart.data.labels.length > MAX_POINTS) {
+    chart.data.labels.shift();
+    chart.data.datasets.forEach(ds => ds.shift ? ds.data.shift() : ds.data.shift());
+  }
+  chart.update('none');
+}
+
+function fmtElapsed(s) {
+  const m = Math.floor(s / 60), sec = Math.floor(s % 60);
+  return `${m}m ${sec.toString().padStart(2,'0')}s`;
+}
+
+function p95Color(v) {
+  if (v < 100) return '#34d399';
+  if (v < 300) return '#fbbf24';
+  return '#f87171';
+}
+
+function errColor(v) {
+  if (v < 1) return '#34d399';
+  if (v < 5) return '#fbbf24';
+  return '#f87171';
+}
+
+// ── Chart setup ──────────────────────────────────────────────────────────────
+const chartDefaults = {
+  responsive: true,
+  animation: false,
+  plugins: { legend: { labels: { color: '#94a3b8', font: { size: 11 } } } },
+  scales: {
+    x: { ticks: { color: '#475569', maxTicksLimit: 8 }, grid: { color: '#1e293b' } },
+    y: { ticks: { color: '#94a3b8' }, grid: { color: '#334155' } },
+  },
+};
+
+function lineDs(label, color, yAxisID) {
+  return {
+    label, borderColor: color, backgroundColor: color + '22',
+    borderWidth: 1.5, pointRadius: 0, fill: true, tension: 0.3,
+    data: [], yAxisID,
+  };
+}
+
+const chartRps = new Chart(document.getElementById('chart-rps'), {
+  type: 'line',
+  data: { labels: [], datasets: [
+    lineDs('RPS', '#38bdf8', 'y'),
+    lineDs('Errors/s', '#f87171', 'y1'),
+  ]},
+  options: { ...chartDefaults, scales: {
+    ...chartDefaults.scales,
+    y:  { position: 'left',  ticks: { color: '#38bdf8' }, grid: { color: '#334155' } },
+    y1: { position: 'right', ticks: { color: '#f87171' }, grid: { drawOnChartArea: false } },
+  }},
+});
+
+const chartLat = new Chart(document.getElementById('chart-lat'), {
+  type: 'line',
+  data: { labels: [], datasets: [
+    lineDs('P50', '#34d399', 'y'),
+    lineDs('P95', '#fbbf24', 'y'),
+    lineDs('P99', '#f87171', 'y'),
+  ]},
+  options: chartDefaults,
+});
+
+const chartWorkers = new Chart(document.getElementById('chart-workers'), {
+  type: 'line',
+  data: { labels: [], datasets: [lineDs('Workers', '#a78bfa', 'y')] },
+  options: chartDefaults,
+});
+
+// Histogram — bar chart, updated less frequently
+const histLabels = ['<50ms','50-100ms','100-250ms','250-500ms','500ms-1s','>1s'];
+const chartHist = new Chart(document.getElementById('chart-hist'), {
+  type: 'bar',
+  data: {
+    labels: histLabels,
+    datasets: [{
+      label: 'Requests',
+      data: [0,0,0,0,0,0],
+      backgroundColor: ['#34d399','#6ee7b7','#fbbf24','#fb923c','#f87171','#ef4444'],
+    }],
+  },
+  options: {
+    ...chartDefaults,
+    plugins: { legend: { display: false } },
+  },
+});
+
+// Sparkline for RPS KPI
+const sparkRps = new Chart(document.getElementById('spark-rps'), {
+  type: 'line',
+  data: { labels: [], datasets: [{
+    data: [], borderColor: '#38bdf8', borderWidth: 1,
+    pointRadius: 0, fill: false, tension: 0.3,
+  }]},
+  options: {
+    animation: false, responsive: true,
+    plugins: { legend: { display: false } },
+    scales: { x: { display: false }, y: { display: false } },
+  },
+});
+
+// ── State ────────────────────────────────────────────────────────────────────
+let tickCount = 0;
+let prevTotalReq = 0;
+let prevTs = null;
+
+// ── SSE listener ─────────────────────────────────────────────────────────────
+const evtSource = new EventSource('/stream');
+
+evtSource.onmessage = (e) => {
+  const d = JSON.parse(e.data);
+  tickCount++;
+
+  // Status badge
+  const badge = document.getElementById('status-badge');
+  badge.textContent = d.status;
+  badge.className = `badge-${d.status} px-3 py-1 rounded-full text-sm font-semibold uppercase`;
+
+  document.getElementById('scenario-name').textContent = d.scenario || '—';
+  document.getElementById('elapsed').textContent = fmtElapsed(d.elapsed_s);
+  document.getElementById('workers').textContent = d.workers_active;
+  document.getElementById('total-req').textContent = d.total_requests.toLocaleString();
+  document.getElementById('total-err').textContent = d.total_errors.toLocaleString();
+
+  // KPI cards
+  document.getElementById('kpi-rps').textContent = d.rps.toFixed(1);
+  const p95el = document.getElementById('kpi-p95');
+  p95el.textContent = d.latency.p95.toFixed(1) + 'ms';
+  p95el.style.color = p95Color(d.latency.p95);
+  document.getElementById('kpi-p50').textContent = d.latency.p50.toFixed(1) + 'ms';
+  document.getElementById('kpi-p99').textContent = d.latency.p99.toFixed(1) + 'ms';
+
+  const errEl = document.getElementById('kpi-err');
+  errEl.textContent = d.error_rate_pct.toFixed(2) + '%';
+  errEl.style.color = errColor(d.error_rate_pct);
+
+  document.getElementById('kpi-tp').textContent = d.throughput_kbps.toFixed(1) + ' KB/s';
+
+  // Derived: errors/s = error_rate * rps / 100
+  const errPerSec = d.error_rate_pct * d.rps / 100;
+  const label = fmtElapsed(d.elapsed_s);
+
+  addPoint(chartRps, label, d.rps, errPerSec);
+  addPoint(chartLat, label, d.latency.p50, d.latency.p95, d.latency.p99);
+  addPoint(chartWorkers, label, d.workers_active);
+
+  // Sparkline
+  sparkRps.data.labels.push('');
+  sparkRps.data.datasets[0].data.push(d.rps);
+  if (sparkRps.data.labels.length > 60) {
+    sparkRps.data.labels.shift();
+    sparkRps.data.datasets[0].data.shift();
+  }
+  sparkRps.update('none');
+};
+
+// ── Endpoint table — polled every 5s via HTMX-style fetch ────────────────────
+async function refreshEndpoints() {
+  const res = await fetch('/api/endpoints');
+  const rows = await res.json();
+  const tbody = document.getElementById('ep-tbody');
+  tbody.innerHTML = rows.map(r => `
+    <tr>
+      <td class="text-sky-300 font-mono">${r.endpoint}</td>
+      <td>${r.requests.toLocaleString()}</td>
+      <td>—</td>
+      <td>${r.p50}</td>
+      <td style="color:${p95Color(r.p95)}">${r.p95}</td>
+      <td style="color:${p95Color(r.p99)}">${r.p99}</td>
+      <td class="text-red-400">${r.errors}</td>
+      <td style="color:${errColor(r.error_pct)}">${r.error_pct.toFixed(2)}%</td>
+    </tr>
+  `).join('');
+
+  // Update histogram using endpoint data aggregated by bucket
+  const buckets = [0,0,0,0,0,0];
+  // histogram data comes from separate API or we approximate from latency distribution
+  // For now we show a placeholder until /api/histogram is available
+  chartHist.update('none');
+}
+
+// ── Recent errors — polled every 2s ──────────────────────────────────────────
+async function refreshErrors() {
+  const res = await fetch('/api/errors');
+  const errors = await res.json();
+  const tbody = document.getElementById('err-tbody');
+  tbody.innerHTML = errors.map(e => `
+    <tr>
+      <td class="text-slate-400">${new Date(e.ts * 1000).toLocaleTimeString()}</td>
+      <td class="text-sky-300 font-mono">${e.endpoint}</td>
+      <td class="${e.status_code >= 500 ? 'text-red-400' : 'text-yellow-400'}">${e.status_code || '—'}</td>
+      <td class="text-slate-400">${e.error_kind}</td>
+      <td>${e.worker_id}</td>
+      <td class="text-slate-400 truncate max-w-xs">${e.message}</td>
+    </tr>
+  `).join('');
+}
+
+setInterval(refreshEndpoints, 5000);
+setInterval(refreshErrors, 2000);
+refreshEndpoints();
+refreshErrors();
+</script>
+</body>
+</html>

@@ -35,7 +35,7 @@ dev = [
 
 [project.scripts]
 start-api    = "api.main:start"
-start-tester = "load_tester.runner:main"
+start-tester = "load_tester.runner:run"
 seed-db      = "scripts.seed_db:main"
 
 [tool.uv]

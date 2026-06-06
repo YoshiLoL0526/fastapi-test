@@ -101,33 +101,33 @@ Estado de cada tarea actualizado a medida que se completa. Las tareas están ord
 
 ## Fase 7 — Core del Load Tester
 
-- ⬜ `load_tester/core/config.py`
-- ⬜ `load_tester/core/client.py` — wrapper httpx async
-- ⬜ `load_tester/core/metrics.py` — colector con ventanas deslizantes
-- ⬜ `load_tester/core/auth.py` — pool de tokens
+- ✅ `load_tester/core/config.py`
+- ✅ `load_tester/core/client.py` — wrapper httpx async
+- ✅ `load_tester/core/metrics.py` — colector con ventanas deslizantes
+- ✅ `load_tester/core/auth.py` — pool de tokens
 
 ---
 
 ## Fase 8 — Flujos y Escenarios
 
-- ⬜ `load_tester/flows/browse_and_buy.py`
-- ⬜ `load_tester/flows/browse_only.py`
-- ⬜ `load_tester/flows/admin_flow.py`
-- ⬜ `load_tester/scenarios/base.py`
-- ⬜ `load_tester/scenarios/ramp_up.py`
-- ⬜ `load_tester/scenarios/spike.py`
-- ⬜ `load_tester/scenarios/sustained.py`
-- ⬜ `load_tester/scenarios/combined.py`
-- ⬜ `load_tester/runner.py`
+- ✅ `load_tester/flows/browse_and_buy.py`
+- ✅ `load_tester/flows/browse_only.py`
+- ✅ `load_tester/flows/admin_flow.py`
+- ✅ `load_tester/scenarios/base.py`
+- ✅ `load_tester/scenarios/ramp_up.py`
+- ✅ `load_tester/scenarios/spike.py`
+- ✅ `load_tester/scenarios/sustained.py`
+- ✅ `load_tester/scenarios/combined.py`
+- ✅ `load_tester/runner.py`
 
 ---
 
 ## Fase 9 — Dashboard UI
 
-- ⬜ `load_tester/ui/main.py` — servidor FastAPI del dashboard
-- ⬜ `load_tester/ui/templates/index.html` — HTMX + Chart.js
-- ⬜ Endpoint SSE `/stream`
-- ⬜ Endpoint de descarga `/report`
+- ✅ `load_tester/ui/main.py` — servidor FastAPI del dashboard
+- ✅ `load_tester/ui/templates/index.html` — HTMX + Chart.js
+- ✅ Endpoint SSE `/stream`
+- ✅ Endpoint de descarga `/report`
 
 ---
 
