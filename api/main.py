@@ -5,21 +5,25 @@ from fastapi.staticfiles import StaticFiles
 
 from api.core.config import settings
 from api.core.database import close_db
+from api.core.logging import get_app_logger, setup_logging
+from api.middleware.logging import LoggingMiddleware
 from api.middleware.request_id import RequestIDMiddleware
 from api.middleware.timing import TimingMiddleware
 from api.routers import auth, cart, categories, health, inventory, orders, payments, products, reviews, uploads, users, websockets
+
+setup_logging()
+_log = get_app_logger()
 
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     import pathlib
     pathlib.Path(settings.upload_dir).mkdir(exist_ok=True)
+    _log.info("Application startup — env=%s", settings.environment)
     yield
+    _log.info("Application shutdown")
     await close_db()
 
-
-import pathlib
-pathlib.Path(settings.upload_dir).mkdir(exist_ok=True)
 
 app = FastAPI(
     title="FastAPI E-commerce Benchmark",
@@ -32,6 +36,7 @@ app = FastAPI(
 
 # Middleware — order matters: outermost runs first on request, last on response
 app.add_middleware(TimingMiddleware)
+app.add_middleware(LoggingMiddleware)
 app.add_middleware(RequestIDMiddleware)
 
 # Static file serving for uploaded images
