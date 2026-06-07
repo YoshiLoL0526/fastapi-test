@@ -5,6 +5,7 @@ from fastapi import HTTPException, status
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
+from sqlalchemy.orm.attributes import set_committed_value
 
 from api.models.cart import Cart, CartItem, Coupon
 from api.models.inventory import Inventory
@@ -30,7 +31,7 @@ async def get_or_create_cart(db: AsyncSession, user_id: uuid.UUID) -> CartRead:
         cart = Cart(user_id=user_id)
         db.add(cart)
         await db.flush()
-        cart.items = []
+        set_committed_value(cart, "items", [])
     return CartRead.model_validate(cart)
 
 
@@ -44,7 +45,7 @@ async def add_item(db: AsyncSession, user_id: uuid.UUID, data: CartItemAdd) -> C
         cart = Cart(user_id=user_id)
         db.add(cart)
         await db.flush()
-        cart.items = []
+        set_committed_value(cart, "items", [])
 
     existing_item = next((i for i in cart.items if i.product_id == data.product_id), None)
     total_needed = data.quantity + (existing_item.quantity if existing_item else 0)
@@ -111,7 +112,7 @@ async def clear_cart(db: AsyncSession, user_id: uuid.UUID) -> CartRead:
         cart = Cart(user_id=user_id)
         db.add(cart)
         await db.flush()
-        cart.items = []
+        set_committed_value(cart, "items", [])
         return CartRead.model_validate(cart)
 
     for item in list(cart.items):
