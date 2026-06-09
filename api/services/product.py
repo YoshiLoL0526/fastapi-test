@@ -88,6 +88,7 @@ async def create_product(db: AsyncSession, data: ProductCreate) -> ProductRead:
     inventory = Inventory(product_id=product.id)
     db.add(inventory)
     await db.flush()
+    await db.refresh(product)
 
     return ProductRead.model_validate(product)
 
@@ -101,6 +102,7 @@ async def update_product(db: AsyncSession, product_id: uuid.UUID, data: ProductU
         setattr(product, field, value)
 
     await db.flush()
+    await db.refresh(product)
     return ProductRead.model_validate(product)
 
 
