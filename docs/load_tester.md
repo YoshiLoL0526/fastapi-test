@@ -176,7 +176,15 @@ Al ejecutarse:
 
 ## Configuración
 
-Todos los parámetros son configurables sin tocar el código, mediante variables de entorno o un archivo `.env`:
+Todos los parámetros son configurables sin tocar el código, mediante variables de entorno o un archivo `.env`.
+Además, el dashboard permite ajustar en memoria los parámetros más importantes antes de lanzar cada prueba:
+
+- escenario
+- cantidad de workers concurrentes
+- tamaño del token pool
+- think time y timeout
+- parámetros de ramp-up, sustained y spike
+
 
 | Variable | Descripción | Default |
 |---|---|---|

@@ -75,9 +75,11 @@ Editar `.env` según el entorno:
 # Crear las tablas
 uv run alembic upgrade head
 
-# Poblar con datos realistas (categorías, productos, usuarios, órdenes)
+# Poblar con datos sintéticos (categorías, productos, usuarios, órdenes)
 uv run seed-db
 ```
+
+El seed usa un generador procedural de catálogo tipo **base item + prefijo + sufijo** para crear productos sintéticos pero ordenados.
 
 ### 2. Levantar la API (PC servidor)
 
@@ -121,6 +123,8 @@ uv run start-tester
 
 El runner lanza el test y el dashboard simultáneamente.
 Abrir en el navegador: `http://localhost:8001` (o la IP del cliente desde otra PC).
+
+Desde el dashboard puedes ajustar antes de iniciar la prueba el escenario, la cantidad de usuarios simultáneos, el token pool, think time, timeouts y los parámetros de ramp-up / sustained / spike.
 
 ---
 

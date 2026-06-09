@@ -37,6 +37,7 @@ from api.models.payment import Payment
 from api.models.product import Category, Product
 from api.models.review import Review
 from api.models.user import Address, User
+from scripts.synthetic_catalog import CATEGORY_THEMES, generate_product_blueprint, generate_review_copy
 
 # ── Configuration ──────────────────────────────────────────────────────────────
 
@@ -275,10 +276,6 @@ ORDER_STATUS_WEIGHTS = [5, 10, 15, 60, 10]
 
 # ── Helpers ────────────────────────────────────────────────────────────────────
 
-def slugify(name: str) -> str:
-    return name.lower().replace("&", "and").replace("'", "").replace(",", "").replace(" ", "-")
-
-
 def rand_past_datetime(days_back: int = 180) -> datetime:
     delta = random.randint(0, days_back * 24 * 60 * 60)
     return datetime.now(UTC) - timedelta(seconds=delta)
@@ -320,39 +317,23 @@ async def seed_products(
     session: AsyncSession, categories: dict[str, uuid.UUID]
 ) -> list[uuid.UUID]:
     """Creates NUM_PRODUCTS products and returns their IDs."""
-    cat_slugs = list(PRODUCT_TEMPLATES.keys())
+    cat_slugs = [slug for slug in CATEGORY_THEMES if slug in categories]
     product_ids: list[uuid.UUID] = []
-    slug_counters: dict[str, int] = {}
+    per_category_serial: dict[str, int] = {slug: 0 for slug in cat_slugs}
 
-    # Distribute products evenly; fill up to NUM_PRODUCTS cycling through categories
-    templates_flat: list[tuple[str, tuple[str, str, float]]] = []
-    for slug in cat_slugs:
-        for tpl in PRODUCT_TEMPLATES[slug]:
-            templates_flat.append((slug, tpl))
-
-    # Cycle through templates until we reach NUM_PRODUCTS
     for i in range(NUM_PRODUCTS):
-        cat_slug, (base_name, desc, base_price) = templates_flat[i % len(templates_flat)]
-
-        # Add a numeric suffix to avoid duplicate slugs when cycling
-        slug_counters[cat_slug] = slug_counters.get(cat_slug, 0) + 1
-        suffix = slug_counters[cat_slug]
-        name = f"{base_name} #{suffix}" if suffix > 1 else base_name
-        slug = f"{slugify(base_name)}-{suffix}"
-
-        # Small price variance (±15%)
-        price = round(base_price * random.uniform(0.85, 1.15), 2)
-
-        # Map category slug to a known category (prefer child if available)
-        cat_id = categories.get(cat_slug) or random.choice(list(categories.values()))
+        cat_slug = cat_slugs[i % len(cat_slugs)]
+        serial = per_category_serial[cat_slug]
+        per_category_serial[cat_slug] += 1
+        blueprint = generate_product_blueprint(cat_slug, serial)
 
         product = Product(
-            name=name,
-            slug=slug,
-            description=desc,
-            price=price,
-            category_id=cat_id,
-            image_url=f"https://cdn.example.com/products/{slug}.jpg",
+            name=blueprint.name,
+            slug=blueprint.slug,
+            description=blueprint.description,
+            price=float(blueprint.price),
+            category_id=categories[cat_slug],
+            image_url=blueprint.image_url,
             rating_avg=0.0,
             rating_count=0,
             is_active=True,
@@ -361,7 +342,6 @@ async def seed_products(
         await session.flush()
         product_ids.append(product.id)
 
-        # Inventory record
         qty = random.randint(10, 500)
         inv = Inventory(
             product_id=product.id,
@@ -371,7 +351,6 @@ async def seed_products(
         )
         session.add(inv)
 
-        # Initial stock movement
         movement = InventoryMovement(
             product_id=product.id,
             delta=qty,
@@ -570,6 +549,9 @@ async def seed_reviews(
     count = 0
 
     random.shuffle(order_product_pairs)
+    product_ids = list({product_id for _, _, product_id in order_product_pairs})
+    product_rows = await session.execute(select(Product.id, Product.name).where(Product.id.in_(product_ids)))
+    product_name_map = {product_id: name for product_id, name in product_rows.all()}
 
     for order_id, user_id, product_id in order_product_pairs:
         if count >= NUM_REVIEWS:
@@ -580,7 +562,8 @@ async def seed_reviews(
         seen.add(pair)
 
         rating = random.choices([5, 4, 3, 2, 1], weights=[40, 30, 15, 10, 5], k=1)[0]
-        title, body = random.choice(REVIEW_TEMPLATES[rating])
+        product_name = product_name_map.get(product_id, "Product")
+        title, body = generate_review_copy(product_name, rating, count)
 
         review = Review(
             product_id=product_id,

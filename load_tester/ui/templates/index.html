@@ -9,59 +9,138 @@
   <style>
     body { background: #0f172a; color: #e2e8f0; font-family: ui-monospace, monospace; }
     .card { background: #1e293b; border: 1px solid #334155; border-radius: 0.75rem; }
-    .badge-idle     { background: #334155; color: #94a3b8; }
-    .badge-running  { background: #064e3b; color: #34d399; }
+    .badge-idle { background: #334155; color: #94a3b8; }
+    .badge-running { background: #064e3b; color: #34d399; }
     .badge-finished { background: #1e3a5f; color: #60a5fa; }
     .metric-val { font-size: 2rem; font-weight: 700; line-height: 1; }
-    .ok    { color: #34d399; }
-    .warn  { color: #fbbf24; }
-    .error { color: #f87171; }
+    .sparkline { height: 32px; }
+    .control-input, .control-select {
+      width: 100%; outline: none; background: #0f172a; color: #e2e8f0;
+      border: 1px solid #334155; border-radius: 0.6rem; padding: 0.55rem 0.7rem; font-size: 0.85rem;
+    }
+    .control-input:focus, .control-select:focus { border-color: #94a3b8; }
+    .control-label { color: #94a3b8; font-size: 0.7rem; text-transform: uppercase; letter-spacing: 0.08em; }
+    .control-help { color: #64748b; font-size: 0.72rem; }
+    .section-title { color: #cbd5e1; font-size: 0.78rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.14em; }
     table { width: 100%; border-collapse: collapse; font-size: 0.8rem; }
-    th { background: #0f172a; color: #64748b; text-align: left; padding: 0.4rem 0.6rem; border-bottom: 1px solid #334155; cursor: pointer; user-select: none; }
+    th { background: #0f172a; color: #64748b; text-align: left; padding: 0.4rem 0.6rem; border-bottom: 1px solid #334155; }
     td { padding: 0.35rem 0.6rem; border-bottom: 1px solid #1e293b; }
     tr:hover td { background: #1e293b; }
-    .sparkline { height: 32px; }
-    select { outline: none; }
-    select option { background: #1e293b; }
     button:disabled { opacity: 0.35; cursor: not-allowed; }
   </style>
 </head>
 <body class="min-h-screen p-4">
 
-  <!-- ── Control panel ─────────────────────────────────────────────────── -->
   <div class="card p-4 mb-4">
-    <div class="flex flex-wrap items-center gap-4">
+    <div class="flex flex-wrap items-center gap-3 mb-4">
       <span class="text-slate-400 text-xs font-semibold uppercase tracking-widest">Test Control</span>
-
-      <div class="flex items-center gap-2">
-        <label class="text-slate-500 text-xs">Scenario</label>
-        <select id="scenario-select"
-          class="bg-slate-700 text-slate-200 text-sm px-3 py-1.5 rounded border border-slate-600 focus:border-slate-400">
-          <option value="combined">Combined</option>
-          <option value="ramp_up">Ramp Up</option>
-          <option value="spike">Spike</option>
-          <option value="sustained">Sustained</option>
-        </select>
-      </div>
-
-      <button id="btn-start" onclick="startTest()"
-        class="px-4 py-1.5 rounded bg-emerald-700 hover:bg-emerald-600 text-sm font-semibold transition-colors">
-        ▶ Start
-      </button>
-      <button id="btn-stop" onclick="stopTest()" disabled
-        class="px-4 py-1.5 rounded bg-red-800 hover:bg-red-700 text-sm font-semibold transition-colors">
-        ■ Stop
-      </button>
-
       <span id="ctrl-msg" class="text-slate-500 text-sm"></span>
+      <div class="ml-auto text-slate-600 text-xs">API: <span id="api-url" class="text-slate-400">—</span></div>
+    </div>
 
-      <div class="ml-auto text-slate-600 text-xs">
-        API: <span id="api-url" class="text-slate-400">—</span>
+    <div class="grid grid-cols-1 xl:grid-cols-4 gap-4">
+      <div class="xl:col-span-2 space-y-3">
+        <div class="section-title">General</div>
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
+          <div>
+            <label class="control-label" for="scenario-select">Scenario</label>
+            <select id="scenario-select" class="control-select">
+              <option value="combined">Combined</option>
+              <option value="ramp_up">Ramp Up</option>
+              <option value="spike">Spike</option>
+              <option value="sustained">Sustained</option>
+            </select>
+          </div>
+          <div>
+            <label class="control-label" for="api-base-url">API Base URL</label>
+            <input id="api-base-url" class="control-input" type="text" placeholder="http://localhost:8000" />
+          </div>
+          <div>
+            <label class="control-label" for="max-workers">Max Workers</label>
+            <input id="max-workers" class="control-input" type="number" min="1" />
+          </div>
+          <div>
+            <label class="control-label" for="token-pool-size">Token Pool</label>
+            <input id="token-pool-size" class="control-input" type="number" min="1" />
+          </div>
+          <div>
+            <label class="control-label" for="think-min">Think Time Min (ms)</label>
+            <input id="think-min" class="control-input" type="number" min="0" />
+          </div>
+          <div>
+            <label class="control-label" for="think-max">Think Time Max (ms)</label>
+            <input id="think-max" class="control-input" type="number" min="0" />
+          </div>
+          <div>
+            <label class="control-label" for="request-timeout">Request Timeout (s)</label>
+            <input id="request-timeout" class="control-input" type="number" min="0.1" step="0.1" />
+          </div>
+        </div>
       </div>
+
+      <div class="space-y-3">
+        <div class="section-title">Ramp Up</div>
+        <div class="space-y-3">
+          <div>
+            <label class="control-label" for="ramp-initial-workers">Initial Workers</label>
+            <input id="ramp-initial-workers" class="control-input" type="number" min="1" />
+          </div>
+          <div>
+            <label class="control-label" for="ramp-step-workers">Step Workers</label>
+            <input id="ramp-step-workers" class="control-input" type="number" min="1" />
+          </div>
+          <div>
+            <label class="control-label" for="ramp-step-interval">Step Interval (s)</label>
+            <input id="ramp-step-interval" class="control-input" type="number" min="0.1" step="0.1" />
+          </div>
+        </div>
+      </div>
+
+      <div class="space-y-3">
+        <div class="section-title">Sustained / Spike</div>
+        <div class="space-y-3">
+          <div>
+            <label class="control-label" for="sustained-workers">Sustained Workers</label>
+            <input id="sustained-workers" class="control-input" type="number" min="1" />
+          </div>
+          <div>
+            <label class="control-label" for="sustained-duration">Sustained Duration (s)</label>
+            <input id="sustained-duration" class="control-input" type="number" min="1" step="1" />
+          </div>
+          <div>
+            <label class="control-label" for="spike-base-workers">Spike Base Workers</label>
+            <input id="spike-base-workers" class="control-input" type="number" min="1" />
+          </div>
+          <div>
+            <label class="control-label" for="spike-peak-workers">Spike Peak Workers</label>
+            <input id="spike-peak-workers" class="control-input" type="number" min="1" />
+          </div>
+          <div class="grid grid-cols-3 gap-2">
+            <div>
+              <label class="control-label" for="spike-before">Before</label>
+              <input id="spike-before" class="control-input" type="number" min="0" step="0.1" />
+            </div>
+            <div>
+              <label class="control-label" for="spike-peak-duration">Peak</label>
+              <input id="spike-peak-duration" class="control-input" type="number" min="0.1" step="0.1" />
+            </div>
+            <div>
+              <label class="control-label" for="spike-after">After</label>
+              <input id="spike-after" class="control-input" type="number" min="0" step="0.1" />
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="mt-4 flex flex-wrap items-center gap-3">
+      <button id="btn-save" onclick="saveConfig()" class="px-4 py-2 rounded bg-slate-700 hover:bg-slate-600 text-sm font-semibold">Save Settings</button>
+      <button id="btn-start" onclick="startTest()" class="px-4 py-2 rounded bg-emerald-700 hover:bg-emerald-600 text-sm font-semibold">▶ Start</button>
+      <button id="btn-stop" onclick="stopTest()" disabled class="px-4 py-2 rounded bg-red-800 hover:bg-red-700 text-sm font-semibold">■ Stop</button>
+      <span class="control-help">Los cambios se aplican en memoria desde el dashboard.</span>
     </div>
   </div>
 
-  <!-- ── Top status bar ────────────────────────────────────────────────── -->
   <div class="card p-4 mb-4 flex flex-wrap items-center gap-6">
     <div class="flex items-center gap-3">
       <span id="status-badge" class="badge-idle px-3 py-1 rounded-full text-sm font-semibold uppercase">Idle</span>
@@ -75,11 +154,10 @@
     </div>
     <div class="ml-auto flex gap-2">
       <a id="dl-json" href="/report?format=json" class="px-3 py-1.5 rounded bg-slate-700 hover:bg-slate-600 text-sm" download>↓ JSON</a>
-      <a id="dl-csv"  href="/report?format=csv"  class="px-3 py-1.5 rounded bg-slate-700 hover:bg-slate-600 text-sm" download>↓ CSV</a>
+      <a id="dl-csv" href="/report?format=csv" class="px-3 py-1.5 rounded bg-slate-700 hover:bg-slate-600 text-sm" download>↓ CSV</a>
     </div>
   </div>
 
-  <!-- ── KPI cards ─────────────────────────────────────────────────────── -->
   <div class="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-4">
     <div class="card p-4">
       <div class="text-slate-500 text-xs mb-1">RPS (5s window)</div>
@@ -88,12 +166,12 @@
     </div>
     <div class="card p-4">
       <div class="text-slate-500 text-xs mb-1">Latency P95</div>
-      <div id="kpi-p95" class="metric-val ok">—</div>
+      <div id="kpi-p95" class="metric-val" style="color:#34d399">—</div>
       <div class="text-xs text-slate-500 mt-1">P50 <span id="kpi-p50" class="text-slate-300">—</span> &nbsp; P99 <span id="kpi-p99" class="text-slate-300">—</span></div>
     </div>
     <div class="card p-4">
       <div class="text-slate-500 text-xs mb-1">Error Rate</div>
-      <div id="kpi-err" class="metric-val ok">—</div>
+      <div id="kpi-err" class="metric-val" style="color:#34d399">—</div>
       <div class="text-xs text-slate-500 mt-1">of last 5s window</div>
     </div>
     <div class="card p-4">
@@ -103,7 +181,6 @@
     </div>
   </div>
 
-  <!-- ── Charts ────────────────────────────────────────────────────────── -->
   <div class="grid grid-cols-1 lg:grid-cols-2 gap-4 mb-4">
     <div class="card p-4">
       <div class="text-slate-400 text-xs mb-3 font-semibold uppercase tracking-widest">RPS & Errors / s</div>
@@ -123,11 +200,10 @@
     </div>
   </div>
 
-  <!-- ── Endpoint table ─────────────────────────────────────────────────── -->
   <div class="card p-4 mb-4">
     <div class="text-slate-400 text-xs mb-3 font-semibold uppercase tracking-widest">Endpoint Breakdown</div>
     <div class="overflow-x-auto">
-      <table id="ep-table">
+      <table>
         <thead>
           <tr>
             <th>Endpoint</th>
@@ -145,11 +221,10 @@
     </div>
   </div>
 
-  <!-- ── Recent errors ──────────────────────────────────────────────────── -->
   <div class="card p-4">
     <div class="text-slate-400 text-xs mb-3 font-semibold uppercase tracking-widest">Recent Errors (last 20)</div>
     <div class="overflow-x-auto">
-      <table id="err-table">
+      <table>
         <thead>
           <tr>
             <th>Time</th>
@@ -166,8 +241,27 @@
   </div>
 
 <script>
-// ── Helpers ──────────────────────────────────────────────────────────────────
 const MAX_POINTS = 300;
+const CONFIG_FIELDS = {
+  api_base_url: 'api-base-url',
+  max_workers: 'max-workers',
+  token_pool_size: 'token-pool-size',
+  think_time_min_ms: 'think-min',
+  think_time_max_ms: 'think-max',
+  request_timeout_s: 'request-timeout',
+  ramp_initial_workers: 'ramp-initial-workers',
+  ramp_step_workers: 'ramp-step-workers',
+  ramp_step_interval_s: 'ramp-step-interval',
+  sustained_workers: 'sustained-workers',
+  sustained_duration_s: 'sustained-duration',
+  spike_base_workers: 'spike-base-workers',
+  spike_peak_workers: 'spike-peak-workers',
+  spike_base_before_s: 'spike-before',
+  spike_peak_duration_s: 'spike-peak-duration',
+  spike_base_after_s: 'spike-after',
+};
+const FLOAT_FIELDS = new Set(['request_timeout_s', 'ramp_step_interval_s', 'sustained_duration_s', 'spike_base_before_s', 'spike_peak_duration_s', 'spike_base_after_s']);
+let currentStatus = 'idle';
 
 function addPoint(chart, label, ...datasets) {
   chart.data.labels.push(label);
@@ -196,7 +290,6 @@ function errColor(v) {
   return '#f87171';
 }
 
-// ── Chart setup ──────────────────────────────────────────────────────────────
 const chartDefaults = {
   responsive: true,
   animation: false,
@@ -208,33 +301,18 @@ const chartDefaults = {
 };
 
 function lineDs(label, color, yAxisID) {
-  return {
-    label, borderColor: color, backgroundColor: color + '22',
-    borderWidth: 1.5, pointRadius: 0, fill: true, tension: 0.3,
-    data: [], yAxisID,
-  };
+  return { label, borderColor: color, backgroundColor: color + '22', borderWidth: 1.5, pointRadius: 0, fill: true, tension: 0.3, data: [], yAxisID };
 }
 
 const chartRps = new Chart(document.getElementById('chart-rps'), {
   type: 'line',
-  data: { labels: [], datasets: [
-    lineDs('RPS', '#38bdf8', 'y'),
-    lineDs('Errors/s', '#f87171', 'y1'),
-  ]},
-  options: { ...chartDefaults, scales: {
-    ...chartDefaults.scales,
-    y:  { position: 'left',  ticks: { color: '#38bdf8' }, grid: { color: '#334155' } },
-    y1: { position: 'right', ticks: { color: '#f87171' }, grid: { drawOnChartArea: false } },
-  }},
+  data: { labels: [], datasets: [lineDs('RPS', '#38bdf8', 'y'), lineDs('Errors/s', '#f87171', 'y1')] },
+  options: { ...chartDefaults, scales: { ...chartDefaults.scales, y: { position: 'left', ticks: { color: '#38bdf8' }, grid: { color: '#334155' } }, y1: { position: 'right', ticks: { color: '#f87171' }, grid: { drawOnChartArea: false } } } },
 });
 
 const chartLat = new Chart(document.getElementById('chart-lat'), {
   type: 'line',
-  data: { labels: [], datasets: [
-    lineDs('P50', '#34d399', 'y'),
-    lineDs('P95', '#fbbf24', 'y'),
-    lineDs('P99', '#f87171', 'y'),
-  ]},
+  data: { labels: [], datasets: [lineDs('P50', '#34d399', 'y'), lineDs('P95', '#fbbf24', 'y'), lineDs('P99', '#f87171', 'y')] },
   options: chartDefaults,
 });
 
@@ -247,51 +325,106 @@ const chartWorkers = new Chart(document.getElementById('chart-workers'), {
 const histLabels = ['<50ms','50-100ms','100-250ms','250-500ms','500ms-1s','>1s'];
 const chartHist = new Chart(document.getElementById('chart-hist'), {
   type: 'bar',
-  data: {
-    labels: histLabels,
-    datasets: [{
-      label: 'Requests',
-      data: [0,0,0,0,0,0],
-      backgroundColor: ['#34d399','#6ee7b7','#fbbf24','#fb923c','#f87171','#ef4444'],
-    }],
-  },
+  data: { labels: histLabels, datasets: [{ label: 'Requests', data: [0,0,0,0,0,0], backgroundColor: ['#34d399','#6ee7b7','#fbbf24','#fb923c','#f87171','#ef4444'] }] },
   options: { ...chartDefaults, plugins: { legend: { display: false } } },
 });
 
 const sparkRps = new Chart(document.getElementById('spark-rps'), {
   type: 'line',
-  data: { labels: [], datasets: [{
-    data: [], borderColor: '#38bdf8', borderWidth: 1,
-    pointRadius: 0, fill: false, tension: 0.3,
-  }]},
-  options: {
-    animation: false, responsive: true,
-    plugins: { legend: { display: false } },
-    scales: { x: { display: false }, y: { display: false } },
-  },
+  data: { labels: [], datasets: [{ data: [], borderColor: '#38bdf8', borderWidth: 1, pointRadius: 0, fill: false, tension: 0.3 }] },
+  options: { animation: false, responsive: true, plugins: { legend: { display: false } }, scales: { x: { display: false }, y: { display: false } } },
 });
 
-// ── Control panel ────────────────────────────────────────────────────────────
+function setCtrlMsg(msg, tone='muted') {
+  const el = document.getElementById('ctrl-msg');
+  el.textContent = msg;
+  el.className = tone === 'error' ? 'text-red-400 text-sm' : tone === 'ok' ? 'text-emerald-400 text-sm' : 'text-slate-500 text-sm';
+}
+
+function setBusy(busy) {
+  document.getElementById('btn-start').disabled = busy;
+  document.getElementById('btn-stop').disabled = !busy;
+  document.getElementById('btn-save').disabled = busy;
+}
+
+function setConfigFormDisabled(disabled) {
+  Object.values(CONFIG_FIELDS).forEach(id => document.getElementById(id).disabled = disabled);
+  document.getElementById('scenario-select').disabled = disabled;
+}
+
+function readConfigForm() {
+  const payload = {};
+  for (const [field, id] of Object.entries(CONFIG_FIELDS)) {
+    const value = document.getElementById(id).value.trim();
+    if (value === '') continue;
+    payload[field] = FLOAT_FIELDS.has(field) ? Number(value) : (field === 'api_base_url' ? value : parseInt(value, 10));
+  }
+  payload.scenario = document.getElementById('scenario-select').value;
+  return payload;
+}
+
+function applyConfigToForm(cfg) {
+  document.getElementById('api-url').textContent = cfg.api_base_url || '—';
+  if (cfg.default_scenario) document.getElementById('scenario-select').value = cfg.default_scenario;
+  for (const [field, id] of Object.entries(CONFIG_FIELDS)) {
+    if (cfg[field] !== undefined && cfg[field] !== null) document.getElementById(id).value = cfg[field];
+  }
+}
+
+async function loadConfig() {
+  const res = await fetch('/config');
+  const cfg = await res.json();
+  applyConfigToForm(cfg);
+}
+
+async function saveConfig() {
+  if (currentStatus === 'running') return;
+  setCtrlMsg('Saving settings…');
+  try {
+    const payload = readConfigForm();
+    delete payload.scenario;
+    const res = await fetch('/config', {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload),
+    });
+    const data = await res.json();
+    if (!res.ok) {
+      setCtrlMsg(data.error || 'Failed to save settings', 'error');
+      return false;
+    }
+    applyConfigToForm(data.config);
+    setCtrlMsg('Settings saved', 'ok');
+    return true;
+  } catch (e) {
+    setCtrlMsg('Network error: ' + e.message, 'error');
+    return false;
+  }
+}
+
 async function startTest() {
-  const scenario = document.getElementById('scenario-select').value;
   setCtrlMsg('Starting…');
   setBusy(true);
+  setConfigFormDisabled(true);
   try {
     const res = await fetch('/start', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ scenario }),
+      body: JSON.stringify(readConfigForm()),
     });
     const data = await res.json();
     if (!res.ok) {
-      setCtrlMsg(data.error || 'Failed to start');
+      setCtrlMsg(data.error || 'Failed to start', 'error');
       setBusy(false);
+      setConfigFormDisabled(false);
     } else {
-      setCtrlMsg('');
+      applyConfigToForm(data.config || {});
+      setCtrlMsg('Test running', 'ok');
     }
   } catch (e) {
-    setCtrlMsg('Network error: ' + e.message);
+    setCtrlMsg('Network error: ' + e.message, 'error');
     setBusy(false);
+    setConfigFormDisabled(false);
   }
 }
 
@@ -301,52 +434,35 @@ async function stopTest() {
   try {
     await fetch('/stop', { method: 'POST' });
   } catch (e) {
-    setCtrlMsg('Network error: ' + e.message);
+    setCtrlMsg('Network error: ' + e.message, 'error');
   }
 }
 
-function setBusy(busy) {
-  document.getElementById('btn-start').disabled = busy;
-  document.getElementById('btn-stop').disabled = !busy;
-}
+loadConfig().catch(() => setCtrlMsg('Could not load config', 'error'));
 
-function setCtrlMsg(msg) {
-  document.getElementById('ctrl-msg').textContent = msg;
-}
-
-// Load config on page open
-fetch('/config').then(r => r.json()).then(cfg => {
-  document.getElementById('api-url').textContent = cfg.api_base_url;
-  const sel = document.getElementById('scenario-select');
-  if (cfg.default_scenario) sel.value = cfg.default_scenario;
-}).catch(() => {});
-
-// ── SSE listener ─────────────────────────────────────────────────────────────
 const evtSource = new EventSource('/stream');
-
 evtSource.onmessage = (e) => {
   const d = JSON.parse(e.data);
+  currentStatus = d.status;
 
-  // Status badge
   const badge = document.getElementById('status-badge');
   badge.textContent = d.status;
   badge.className = `badge-${d.status} px-3 py-1 rounded-full text-sm font-semibold uppercase`;
 
-  // Sync button states with actual test status
   const running = d.status === 'running';
   document.getElementById('btn-start').disabled = running;
   document.getElementById('btn-stop').disabled = !running;
-  if (d.status === 'finished' && document.getElementById('ctrl-msg').textContent === 'Stopping…') {
-    setCtrlMsg('');
-  }
+  document.getElementById('btn-save').disabled = running;
+  setConfigFormDisabled(running);
+  if (!running && document.getElementById('ctrl-msg').textContent === 'Stopping…') setCtrlMsg('Stopped', 'ok');
 
   document.getElementById('scenario-name').textContent = d.scenario || '—';
   document.getElementById('elapsed').textContent = fmtElapsed(d.elapsed_s);
   document.getElementById('workers').textContent = d.workers_active;
   document.getElementById('total-req').textContent = d.total_requests.toLocaleString();
   document.getElementById('total-err').textContent = d.total_errors.toLocaleString();
-
   document.getElementById('kpi-rps').textContent = d.rps.toFixed(1);
+
   const p95el = document.getElementById('kpi-p95');
   p95el.textContent = d.latency.p95.toFixed(1) + 'ms';
   p95el.style.color = p95Color(d.latency.p95);
@@ -356,12 +472,10 @@ evtSource.onmessage = (e) => {
   const errEl = document.getElementById('kpi-err');
   errEl.textContent = d.error_rate_pct.toFixed(2) + '%';
   errEl.style.color = errColor(d.error_rate_pct);
-
   document.getElementById('kpi-tp').textContent = d.throughput_kbps.toFixed(1) + ' KB/s';
 
   const errPerSec = d.error_rate_pct * d.rps / 100;
   const label = fmtElapsed(d.elapsed_s);
-
   addPoint(chartRps, label, d.rps, errPerSec);
   addPoint(chartLat, label, d.latency.p50, d.latency.p95, d.latency.p99);
   addPoint(chartWorkers, label, d.workers_active);
@@ -375,12 +489,10 @@ evtSource.onmessage = (e) => {
   sparkRps.update('none');
 };
 
-// ── Endpoint table — polled every 5s ─────────────────────────────────────────
 async function refreshEndpoints() {
   const res = await fetch('/api/endpoints');
   const rows = await res.json();
-  const tbody = document.getElementById('ep-tbody');
-  tbody.innerHTML = rows.map(r => `
+  document.getElementById('ep-tbody').innerHTML = rows.map(r => `
     <tr>
       <td class="text-sky-300 font-mono">${r.endpoint}</td>
       <td>${r.requests.toLocaleString()}</td>
@@ -394,12 +506,10 @@ async function refreshEndpoints() {
   `).join('');
 }
 
-// ── Recent errors — polled every 2s ──────────────────────────────────────────
 async function refreshErrors() {
   const res = await fetch('/api/errors');
   const errors = await res.json();
-  const tbody = document.getElementById('err-tbody');
-  tbody.innerHTML = errors.map(e => `
+  document.getElementById('err-tbody').innerHTML = errors.map(e => `
     <tr>
       <td class="text-slate-400">${new Date(e.ts * 1000).toLocaleTimeString()}</td>
       <td class="text-sky-300 font-mono">${e.endpoint}</td>

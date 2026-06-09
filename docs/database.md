@@ -266,15 +266,16 @@ Los siguientes índices son críticos para el rendimiento bajo carga:
 
 ## Seeding de Datos
 
-Antes de ejecutar el benchmark, la base de datos se puebla con datos realistas mediante el script `scripts/seed_db.py`:
+Antes de ejecutar el benchmark, la base de datos se puebla con datos sintéticos mediante el script `scripts/seed_db.py`:
 
 - 10 categorías con estructura padre/hijo
-- 500 productos distribuidos entre categorías
+- 500 productos generados proceduralmente con sistema base + prefijo + sufijo
 - 1000 usuarios de prueba (50 son parte del pool del tester)
 - 5 usuarios administradores
 - Stock inicial aleatorio entre 10 y 500 unidades por producto
 - 200 órdenes históricas con sus pagos e ítems
-- 1000 reseñas distribuidas entre productos y usuarios
+- 1000 reseñas sintéticas derivadas del producto y del rating
 - 10 cupones de descuento activos
 
 El seeding es idempotente: puede ejecutarse múltiples veces sin duplicar datos.
+El generador mantiene coherencia por categoría y permite escalar el catálogo sin perder estructura.

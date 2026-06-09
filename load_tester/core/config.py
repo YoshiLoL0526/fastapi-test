@@ -16,8 +16,8 @@ class LoadTestSettings(BaseSettings):
     results_dir: str = "results"
 
     # Admin credentials (must exist in the seeded DB)
-    admin_email: str = "admin@example.com"
-    admin_password: str = "admin1234"
+    admin_email: str = "admin01@example.com"
+    admin_password: str = "TestPassword123!"
 
     # Ramp-up scenario
     ramp_initial_workers: int = 5

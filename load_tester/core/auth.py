@@ -36,6 +36,8 @@ class TokenPool:
 
     async def initialize(self, size: int) -> None:
         """Create/login `size` test users and fill the pool."""
+        self._tokens = []
+        self._admin_token = None
         print(f"[auth] Initializing token pool with {size} users...")
         async with httpx.AsyncClient(base_url=settings.api_base_url, timeout=30.0) as client:
             await self._warm_admin(client)

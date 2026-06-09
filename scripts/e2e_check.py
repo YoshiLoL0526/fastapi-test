@@ -117,8 +117,8 @@ async def run_checks(base: str) -> Suite:
             suite.record("Product search", False, (time.perf_counter() - t0) * 1000, str(exc)[:80])
 
         # ── 5. Admin login ───────────────────────────────────────────────────
-        admin_email = os.environ.get("ADMIN_EMAIL", "admin@example.com")
-        admin_password = os.environ.get("ADMIN_PASSWORD", "admin1234")
+        admin_email = os.environ.get("ADMIN_EMAIL", "admin01@example.com")
+        admin_password = os.environ.get("ADMIN_PASSWORD", "TestPassword123!")
         admin_token: str | None = None
 
         t0 = time.perf_counter()

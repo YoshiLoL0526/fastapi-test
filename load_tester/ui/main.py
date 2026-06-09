@@ -9,7 +9,7 @@ from typing import AsyncIterator
 from fastapi import FastAPI
 from fastapi.responses import JSONResponse, Response, StreamingResponse
 from fastapi.templating import Jinja2Templates
-from pydantic import BaseModel
+from pydantic import BaseModel, ConfigDict, Field, model_validator
 from starlette.requests import Request
 
 from load_tester.core.config import settings
@@ -23,8 +23,83 @@ _test_task: asyncio.Task | None = None
 VALID_SCENARIOS = ["combined", "ramp_up", "spike", "sustained"]
 
 
-class StartRequest(BaseModel):
+class DashboardConfigPayload(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    api_base_url: str | None = None
+    max_workers: int | None = Field(default=None, ge=1, le=5000)
+    token_pool_size: int | None = Field(default=None, ge=1, le=5000)
+    think_time_min_ms: int | None = Field(default=None, ge=0, le=60_000)
+    think_time_max_ms: int | None = Field(default=None, ge=0, le=60_000)
+    request_timeout_s: float | None = Field(default=None, gt=0, le=300)
+    ramp_initial_workers: int | None = Field(default=None, ge=1, le=5000)
+    ramp_step_workers: int | None = Field(default=None, ge=1, le=5000)
+    ramp_step_interval_s: float | None = Field(default=None, gt=0, le=3600)
+    spike_base_workers: int | None = Field(default=None, ge=1, le=5000)
+    spike_peak_workers: int | None = Field(default=None, ge=1, le=5000)
+    spike_base_before_s: float | None = Field(default=None, ge=0, le=3600)
+    spike_peak_duration_s: float | None = Field(default=None, gt=0, le=3600)
+    spike_base_after_s: float | None = Field(default=None, ge=0, le=3600)
+    sustained_workers: int | None = Field(default=None, ge=1, le=5000)
+    sustained_duration_s: float | None = Field(default=None, gt=0, le=86_400)
+
+    @model_validator(mode="after")
+    def validate_ranges(self) -> "DashboardConfigPayload":
+        if (
+            self.think_time_min_ms is not None
+            and self.think_time_max_ms is not None
+            and self.think_time_min_ms > self.think_time_max_ms
+        ):
+            raise ValueError("think_time_min_ms cannot be greater than think_time_max_ms")
+        return self
+
+
+class StartRequest(DashboardConfigPayload):
     scenario: str = "combined"
+
+
+def _config_snapshot() -> dict[str, object]:
+    return {
+        "api_base_url": settings.api_base_url,
+        "default_scenario": settings.scenario,
+        "max_workers": settings.max_workers,
+        "token_pool_size": settings.token_pool_size,
+        "think_time_min_ms": settings.think_time_min_ms,
+        "think_time_max_ms": settings.think_time_max_ms,
+        "request_timeout_s": settings.request_timeout_s,
+        "ramp_initial_workers": settings.ramp_initial_workers,
+        "ramp_step_workers": settings.ramp_step_workers,
+        "ramp_step_interval_s": settings.ramp_step_interval_s,
+        "spike_base_workers": settings.spike_base_workers,
+        "spike_peak_workers": settings.spike_peak_workers,
+        "spike_base_before_s": settings.spike_base_before_s,
+        "spike_peak_duration_s": settings.spike_peak_duration_s,
+        "spike_base_after_s": settings.spike_base_after_s,
+        "sustained_workers": settings.sustained_workers,
+        "sustained_duration_s": settings.sustained_duration_s,
+        "scenarios": VALID_SCENARIOS,
+    }
+
+
+def _apply_runtime_config(payload: DashboardConfigPayload) -> None:
+    updates = payload.model_dump(exclude_none=True)
+    max_workers = updates.get("max_workers", settings.max_workers)
+    sustained_workers = updates.get("sustained_workers", settings.sustained_workers)
+    ramp_initial_workers = updates.get("ramp_initial_workers", settings.ramp_initial_workers)
+    spike_base_workers = updates.get("spike_base_workers", settings.spike_base_workers)
+    spike_peak_workers = updates.get("spike_peak_workers", settings.spike_peak_workers)
+
+    if sustained_workers > max_workers:
+        raise ValueError("sustained_workers cannot exceed max_workers")
+    if ramp_initial_workers > max_workers:
+        raise ValueError("ramp_initial_workers cannot exceed max_workers")
+    if spike_base_workers > max_workers:
+        raise ValueError("spike_base_workers cannot exceed max_workers")
+    if spike_peak_workers > max_workers:
+        raise ValueError("spike_peak_workers cannot exceed max_workers")
+
+    for field, value in updates.items():
+        setattr(settings, field, value)
 
 
 def create_app() -> FastAPI:
@@ -49,9 +124,15 @@ def create_app() -> FastAPI:
                 {"error": f"Unknown scenario '{body.scenario}'. Valid: {VALID_SCENARIOS}"},
                 status_code=422,
             )
+        try:
+            _apply_runtime_config(body)
+        except ValueError as exc:
+            return JSONResponse({"error": str(exc)}, status_code=422)
+
+        settings.scenario = body.scenario
         from load_tester.runner import run_test
         _test_task = asyncio.create_task(run_test(body.scenario))
-        return {"status": "started", "scenario": body.scenario}
+        return {"status": "started", "scenario": body.scenario, "config": _config_snapshot()}
 
     @app.post("/stop")
     async def stop_test():
@@ -63,12 +144,17 @@ def create_app() -> FastAPI:
 
     @app.get("/config")
     async def get_config():
-        return {
-            "api_base_url": settings.api_base_url,
-            "default_scenario": settings.scenario,
-            "max_workers": settings.max_workers,
-            "scenarios": VALID_SCENARIOS,
-        }
+        return _config_snapshot()
+
+    @app.put("/config")
+    async def update_config(body: DashboardConfigPayload):
+        if metrics_store.status == TestStatus.running:
+            return JSONResponse({"error": "Cannot change config while a test is running"}, status_code=409)
+        try:
+            _apply_runtime_config(body)
+        except ValueError as exc:
+            return JSONResponse({"error": str(exc)}, status_code=422)
+        return {"status": "updated", "config": _config_snapshot()}
 
     # ── Streaming & data ───────────────────────────────────────────────────────
 
