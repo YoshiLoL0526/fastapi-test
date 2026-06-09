@@ -26,6 +26,7 @@ async def update_inventory(db: AsyncSession, product_id: uuid.UUID, data: Invent
         setattr(inv, field, value)
 
     await db.flush()
+    await db.refresh(inv)
     return InventoryRead.model_validate(inv)
 
 
@@ -51,6 +52,7 @@ async def adjust_stock(db: AsyncSession, product_id: uuid.UUID, data: InventoryA
         reason=data.reason,
     ))
     await db.flush()
+    await db.refresh(inv)
     return InventoryRead.model_validate(inv)
 
 
